@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraSwitcher : MonoBehaviour
 {
@@ -13,24 +14,6 @@ public class CameraSwitcher : MonoBehaviour
 
     [SerializeField]
     private GameObject thirdPersonCanvas;
-
-    private bool isAiming;
-
-    private void Update()
-    {
-        if (Input.GetButton("Fire2"))
-        {
-            isAiming = true;
-            
-            SwitchToAimCamera();
-        }
-        else
-        {
-            isAiming = false;
-            
-            SwitchToThirdCamera();
-        }
-    }
 
     private void SwitchToAimCamera()
     {
@@ -47,9 +30,16 @@ public class CameraSwitcher : MonoBehaviour
         aimCamera.SetActive(false);
         aimCanvas.SetActive(false);
     }
-
-    public bool IsAiming()
+    
+    public void OnAim(InputValue value)
     {
-        return isAiming;
+        if (value.isPressed)
+        {
+            SwitchToAimCamera();
+        }
+        else
+        {
+            SwitchToThirdCamera();
+        }
     }
 }

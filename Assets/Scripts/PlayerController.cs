@@ -1,6 +1,8 @@
-﻿using UnityEngine;
+﻿using System.Diagnostics.CodeAnalysis;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
+[SuppressMessage("ReSharper", "Unity.InefficientMultiplicationOrder")]
 public class PlayerController : MonoBehaviour
 {
     
@@ -18,7 +20,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float sprint = 3f;
 
-    private bool stopped;
+    private bool isAiming;
+
+    private bool isRunning;
+    
+    private bool isStopped;
 
     private Vector2 movement;
 
@@ -37,7 +43,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] 
     private float jumpRange = 1f;
 
-    private Vector3 velocity;
+    private float jumpVelocity;
     
     [SerializeField]
     private Transform surfaceCheck;
@@ -48,7 +54,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] 
     private LayerMask surfaceMask;
     
-    [Header("Player Jumping and Velocity")] 
+    [Header("Animation")] 
     
     [SerializeField]
     private float dampTime = .1f;
@@ -79,43 +85,26 @@ public class PlayerController : MonoBehaviour
         HandleJump();
     }
 
-    private bool IsAiming()
-    {
-        return Input.GetButton("Fire2");
-    }
-
-    private bool IsRunning()
-    {
-        return Input.GetKey(KeyCode.LeftShift);
-    }
-
-    private bool IsJumpPressed()
-    {
-        return Input.GetButtonDown("Jump");
-    }
-
     private void HandleMove()
     {
-        if (stopped)
+        if (isStopped)
             return;
 
-        animator.SetBool(isAimingHash, IsAiming());
-
-        if (IsAiming())
+        if (isAiming)
         {
             float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, camera.eulerAngles.y, ref turnCalmVelocity, turnCalmTime);
             transform.rotation = Quaternion.Euler(0f, angle, 0f); 
         }
         
         Vector3 direction = new Vector3(movement.x, 0f, movement.y).normalized;
-        animator.SetFloat(velocityHash, IsRunning() ? direction.magnitude : direction.magnitude / 2, dampTime, Time.deltaTime);
+        animator.SetFloat(velocityHash, isRunning ? direction.magnitude : direction.magnitude / 2, dampTime, Time.deltaTime);
 
         if (direction.magnitude > 0)
         {
             float playerSpeed;
             float velocityX;
             float velocityZ;
-            if (IsRunning())
+            if (isRunning)
             {
                 playerSpeed = sprint;
                 velocityX = movement.x * 2;
@@ -130,7 +119,7 @@ public class PlayerController : MonoBehaviour
             
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + camera.eulerAngles.y;
 
-            if (!IsAiming())
+            if (!isAiming)
             {
                 float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnCalmVelocity, turnCalmTime);
                 transform.rotation = Quaternion.Euler(0f, angle, 0f); 
@@ -153,27 +142,37 @@ public class PlayerController : MonoBehaviour
     {
         bool onSurface = Physics.CheckSphere(surfaceCheck.position, surfaceDistance, surfaceMask);
 
-        if (onSurface && IsJumpPressed())
-        {
-            animator.SetTrigger(jumpHash);
-            
-            velocity.y = Mathf.Sqrt(jumpRange * 2 * GRAVITY);
-        }
-        else
+        if (!onSurface)
         {
             animator.ResetTrigger(jumpHash);
-
-            velocity.y -= GRAVITY * Time.deltaTime;
+            
+            jumpVelocity -= GRAVITY * Time.deltaTime;
         }
 
-        characterController.Move(velocity * Time.deltaTime);
-        
+        characterController.Move(Vector3.up * jumpVelocity * Time.deltaTime);
     }
 
     public void OnMove(InputValue value) => movement = value.Get<Vector2>();
 
-    public void SetStopped(bool playerStopped)
+    public void OnAim(InputValue value)
     {
-        stopped = playerStopped;
+        isAiming = value.isPressed;
+        animator.SetBool(isAimingHash, isAiming);
     }
+
+    public void OnRun(InputValue value) => isRunning = value.isPressed;
+
+    public void OnJump(InputValue value)
+    {
+        bool onSurface = Physics.CheckSphere(surfaceCheck.position, surfaceDistance, surfaceMask);
+        
+        if (onSurface)
+        {
+            animator.SetTrigger(jumpHash);
+            
+            jumpVelocity= Mathf.Sqrt(jumpRange * 2 * GRAVITY);
+        }
+    }
+
+    public void SetStopped(bool playerStopped) => isStopped = playerStopped;
 }

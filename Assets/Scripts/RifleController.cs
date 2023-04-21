@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class RifleController : MonoBehaviour
 {
@@ -21,8 +22,6 @@ public class RifleController : MonoBehaviour
 
     private PlayerController playerController;
 
-    private CameraSwitcher cameraSwitcher;
-
     [Header("Ammunition and shooting")]
     
     [SerializeField]
@@ -36,9 +35,15 @@ public class RifleController : MonoBehaviour
 
     private int currentAmmunition;
 
-    private bool reloading;
+    private bool isReloading;
 
     private float nextTimeToShoot;
+    
+    private int reloadingHash;
+
+    private bool isShooting;
+
+    private bool isAiming;
 
     [Header("Effects")]
     
@@ -54,22 +59,22 @@ public class RifleController : MonoBehaviour
 
         animator = GetComponentInParent<Animator>();
         playerController = GetComponentInParent<PlayerController>();
-        cameraSwitcher = GetComponentInParent<CameraSwitcher>();
+
+        reloadingHash = Animator.StringToHash("Is Reloading");
     }
 
     private void Update()
     {
-        if (reloading)
+        if (isReloading)
             return;
 
-        if ((Input.GetKey(KeyCode.R) && currentAmmunition < maxAmmunition) || currentAmmunition <= 0)
+        if (currentAmmunition <= 0)
         {
             StartCoroutine(Reload());
             return;
         }
-        
-        
-        if (Input.GetButton("Fire1") && cameraSwitcher.IsAiming() && Time.time >= nextTimeToShoot)
+
+        if (isShooting && isAiming && Time.time >= nextTimeToShoot)
         {
             nextTimeToShoot = Time.time + 1f / fireCharge;
             Shoot();
@@ -108,15 +113,27 @@ public class RifleController : MonoBehaviour
 
     private IEnumerator Reload()
     {
-        reloading = true;
+        isReloading = true;
         playerController.SetStopped(true);
-        animator.SetBool("Is Reloading", true);
+        animator.SetBool(reloadingHash, true);
 
         yield return new WaitForSeconds(reloadingTime);
         
-        animator.SetBool("Is Reloading", false);
+        animator.SetBool(reloadingHash, false);
         currentAmmunition = maxAmmunition;
         playerController.SetStopped(false);
-        reloading = false;
+        isReloading = false;
     }
+
+    public void OnReload(InputValue value)
+    {
+        if (currentAmmunition < maxAmmunition)
+        {
+            StartCoroutine(Reload());
+        }
+    }
+    
+    public void OnFire(InputValue value) => isShooting = value.isPressed;
+    
+    public void OnAim(InputValue value) => isAiming = value.isPressed;
 }

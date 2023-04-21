@@ -18,13 +18,7 @@ public class ObjectController : MonoBehaviour
         }
     }
 
-    private void Die()
-    {
-        Destroy(gameObject, dieDelay);
-    }
+    private void Die() => Destroy(gameObject, dieDelay);
 
-    private bool IsOutOfHealth()
-    {
-        return health <= 0f;
-    }
+    private bool IsOutOfHealth() => health <= 0f;
 }
